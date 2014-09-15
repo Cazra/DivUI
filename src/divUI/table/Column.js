@@ -30,15 +30,15 @@
  *      row as the label for the column.
  */
 DivUI.Table.Column = function(id, label) {
-  DivUI.Component.call(this);
+  var th = document.createElement("th");
+  DivUI.Component.call(this, th);
   
   this._id = id;
   
-  this.setLabelContent(label);
-  
-  this._sorter = function(a,b) {
-    var textA = a.getContents(id);
-    var textB = b.getContents(id);
+  this.header(label);
+  this.sorter(function(a,b) {
+    var textA = a.getValue(id);
+    var textB = b.getValue(id);
     
     if(textA > textB) {
       return 1;
@@ -49,7 +49,7 @@ DivUI.Table.Column = function(id, label) {
     else {
       return 0;
     }
-  };
+  });
 };
 
 DivUI.Table.Column.prototype = {
@@ -66,86 +66,44 @@ DivUI.Table.Column.prototype = {
     return this._id;
   },
   
+  /** 
+   * Gets the TH element of the column's header. 
+   * @return {th element}
+   */
+  getTH: function() {
+    return this.getDiv();
+  },
   
   //////// Header
   
   /** 
-   * Returns the HTML content of the column's header. 
+   * Setter/getter for the content of the column's header. 
+   * @param {string} content
    * @return {string}
    */
-  getLabelContent:function() {
-    return this.getDiv().innerHTML
-  },
-  
-  
-  /**
-   * Sets the HTML content of the column's header.
-   * @param {string} label
-   */
-  setLabelContent:function(label) {
-    this.getDiv().innerHTML = label;
-  },
-  
-  
-  /** 
-   * Returns the width of the column's header. 
-   * @return {uint}
-   */
-  getWidth:function() {
-    return this.getDiv().offsetWidth;
-  },
-  
-  /** 
-   * Returns the height of the column's header cell. 
-   * @return {uint}
-   */
-  getHeaderHeight:function() {
-    return this.getDiv().offsetHeight;
+  header: function(content) {
+    if(content !== undefined) {
+      this.getTH().innerHTML = content;
+    }
+    return this.getTH().innerHTML;
   },
   
   
   //////// Column sorting
   
   /** 
-   * Returns the function used by the table to sort rows by this column.
-   * By default, this returns a comparator function that would sort the rows 
-   * in increasing alphabetical order by the contents of this column.
-   * @return {function(a, b) -> number}   a and b are DivUI.Table.Row objects.
+   * Setter/getter for the column's sorting comparison function. 
+   * By default, the column contents will be sorted in alphabetical order
+   * of its cells HTML content. The sorting comparison function is of the form
+   * {function(a: DivUI.Table.Row, b: DivUI.Table.Row) : number}
+   * @param {function} func
+   * @return {function}
    */
-  getSorter:function() {
-    return this._sorter;
-  },
-  
-  
-  /** 
-   * Sets the function used by the table to sort rows by this column.
-   */
-  setSorter:function(sorter) {
-    this._sorter = sorter;
-  },
-  
-  
-  //////// Look & Feel
-  
-  /** 
-   * Returns the CSS style for the column's div element for the table's 
-   * header row. 
-   * @return {string}
-   */
-  getStyle:function() {
-    return this.getDiv().style.cssText;
-  },
-  
-  
-  /** 
-   * Sets the CSS style for the column's div element for the table's header row.
-   * @param {string} style
-   */
-  setStyle:function(style) {
-    if(style.search("display:table-cell;") == -1) {
-      style = "display:table-cell; " + style;
+  sorter: function(func) {
+    if(func !== undefined) {
+      this._sorter = func;
     }
-    this.getDiv().style.cssText = style;
+    return this._sorter;
   }
   
 };

@@ -23,8 +23,7 @@
 */
 
 /** 
- * Constructs a dynamically-updatable table out of div elements.
- * The table is appended to some container div element.
+ * Constructs a dynamically-updatable table element.
  * 
  * To create a table, first create the DivUI.Table object, then add the Columns 
  * for the table. After the columns have been created, rows can be added, 
@@ -32,21 +31,15 @@
  * @constructor
  */
 DivUI.Table = function() {
-  DivUI.Container.call(this);
+  var table = document.createElement("table");
+  DivUI.Component.call(this, table);
   
-  this.getDiv().style.cssText = "border-style:solid; border-width:2; display:table;";
-  
-  this._header = new DivUI.Container();
-  this._header.getDiv().style.cssText = "display:table-row;";
-  this.add(this._header);
+  this._header = Util.DOM.appendNew(Util.DOM.appendNew(table, "thead"), "tr");
+  this._body = Util.DOM.appendNew(table, "tbody");
   
   this._columns = {};
   this._columnIDs = [];
-  
   this._rows = [];
-  
-  this._columnHeaderStyle = "display:table-cell; border:solid; border-width:2; padding-right:10px;";
-  this._cellStyle = "display:table-cell; border:solid; border-width:1; padding-right:10px;";
 };
 
 DivUI.Table.prototype = {
@@ -54,6 +47,21 @@ DivUI.Table.prototype = {
   constructor: DivUI.Table,
   
   isaTable: true,
+  
+  
+  getTable: function() {
+    return this.getDiv();
+  },
+  
+  
+  getBody: function() {
+    return this._body;
+  },
+  
+  
+  getHeader: function() {
+    return this._header;
+  },
   
   //////// Columns
   
@@ -65,15 +73,13 @@ DivUI.Table.prototype = {
    */
   addColumn:function(id, label) {
     var column = new DivUI.Table.Column(id, label);
-    column.setStyle(this._columnHeaderStyle);
-    
-    this._header.add(column);
+    this._header.appendChild(column.getTH());
     
     this._columns[id] = column;
     this._columnIDs.push(id);
     
     var self = this;
-    column.getDiv().onclick = function(event) {
+    column.getTH().onclick = function(event) {
       self.sortByColumn(column.getID());
       event.stopPropagation();
     };
@@ -120,10 +126,9 @@ DivUI.Table.prototype = {
    */
   addRow:function(contentsJSON) {
     var row = new DivUI.Table.Row(this._columnIDs, contentsJSON);
-    row.setStyle(this._cellStyle);
     
     // Append the row.
-    this.add(row);
+    this._body.appendChild(row.getDiv());
     this._rows.push(row);
 
     return row;
@@ -138,15 +143,9 @@ DivUI.Table.prototype = {
     var row = new DivUI.Table.Row(this._columnIDs, contentsJSON);
     row.setStyle(this._cellStyle);
     
-    // Remove the header temporarily.
-    var header = this.removeFirst();
-    
     // Prepend the row
-    this.addFirst(row);
+    this._body.insertBefore(row.getDiv());
     this._rows.unshift(row);
-    
-    // Prepend the header back on.
-    this.addFirst(header);
     
     return row;
   },
@@ -178,6 +177,16 @@ DivUI.Table.prototype = {
   
   
   /** 
+   * Returns the index of a row in this table, or -1 if it isn't found. 
+   * @param {DivUI.Table.Row}
+   * @return {int}
+   */
+  indexOfRow: function(row) {
+    return this._rows.indexOf(row);
+  },
+  
+  
+  /** 
    * Returns the number of rows present in the table. 
    * @return {uint}
    */
@@ -186,16 +195,28 @@ DivUI.Table.prototype = {
   },
   
   
+  /** 
+   * Removes the nth row from the table.
+   * @param {uint} n
+   * @return {DivUI.Table.Row}
+   */
+  removeRow: function(n) {
+    var row = this._rows[n];
+    this._body.removeChild(row.getTR());
+    this._rows.splice(n, 1);
+  },
+  
+  
   /**  
    * Removes all rows from the table.
    * @return {array:DivUI.Table.Row} The list of rows removed from the table.
    */
   removeAllRows:function() {
-    var result = this._rows;
+    var result = this.getRows();
     
-    this.removeAll();
-    this.add(this._header);
-    this._rows = [];
+    while(this.getRowCount() > 0) {
+      this.removeRow(0);
+    }
     
     return result;
   },
@@ -207,147 +228,27 @@ DivUI.Table.prototype = {
   
   /** 
    * Sorts all the rows in the table by their values in some column. 
+   * @param {string} columnID
    */
   sortByColumn:function(columnID) {
     var column = this.getColumn(columnID);
-    var sorter = column.getSorter();
+    var sorter = column.sorter();
     
     if(sorter) {
-      var rows = this.removeAllRows();
+      var rows = this.getRows();
       rows.sort(sorter);
       
-      for(var i in rows) {
-        this.add(rows[i]);
+      this._body.innerHTML = "";
+      for(var i=0; i<rows.length; i++) {
+        this._body.appendChild(rows[i].getTR());
       }
       this._rows = rows;
-
     }
-  },
-  
-  
-  
-  
-  //////// Metrics
-  
-  
-  /** 
-   * Returns the total inner width of the header row.
-   * @return {uint}
-   */
-  getHeaderWidth:function() {
-    var width = 0;
-    for(var id in this._columns) {
-      width += this._columns[id].getWidth();
-    }
-    return width;
-  },
-  
-  
-  /** 
-   * Returns the inner height of the header row.
-   * @return {uint}
-   */
-  getHeaderHeight:function() {
-    var height = 0;
-    for(var id in this._columns) {
-      var h = this._columns[id].getHeaderHeight();
-      if(h > height) {
-        height = h;
-      }
-    }
-    return height;
-  },
-  
-  
-  
-  /** 
-   * Resizes the table's columns to fit the contents. 
-   */
-  resizeToFitContents:function() {
-    var totalWidth = this.getHeaderWidth();
-    this._header.getDiv().style.width = totalWidth;
-    this.getDiv().style.width = totalWidth;
-    
-    var headerHeight = this.getHeaderHeight();
-    this._header.getDiv().style.height = headerHeight;
-    this.getDiv().style.height = headerHeight;
-  },
-  
-  
-  
-  //////// Look & Feel
-  
-  /** 
-   * Returns the CSS style for the table's div element. 
-   * @return {string}
-   */
-  getStyle:function() {
-    return this.getDiv().style.cssText;
-  },
-  
-  /** 
-   * Sets the CSS style for the table's div element. 
-   * @param {string} style
-   */
-  setStyle:function(style) {
-    if(style.search("display:table;") == -1) {
-      style = "display:table; " + style;
-    }
-    this.getDiv().style.cssText = style;
-  },
-  
-  /**
-   * Returns the CSS style for the table's header row.
-   * @return {string}
-   */
-  getHeaderStyle:function() {
-    return this._columnHeaderStyle;
-  },
-  
-  /** 
-   * Sets the CSS style for the table's header row.
-   * @param {string} style
-   */
-  setHeaderStyle:function(style) {
-    if(style.search("display:table-cell;") == -1) {
-      style = "display:table-cell; " + style;
-    }
-    for(var id in this._columns) {
-      this._columns[id].setStyle(style);
-    }
-    this._columnHeaderStyle = style;
-  },
-  
-  
-  /** 
-   * Returns the general CSS style used for the table's cells. 
-   * @return {string}
-   */
-  getCellStyle:function() {
-    return this._cellStyle;
-  },
-  
-  
-  /** 
-   * Sets the CSS style for the table's cells. 
-   * All cells will have the display property "table-cell".
-   * @param {string} style
-   */
-  setCellStyle:function(style) {
-    if(style.search("display:table-cell;") == -1) {
-      style = "display:table-cell; " + style;
-    }
-	
-    for(var i in this._rows) {
-      this._rows[i].setStyle(style);
-    }
-    this._cellStyle = style;
   }
-  
 };
 
 
-Util.Inheritance.inherit(DivUI.Table, DivUI.Container);
+Util.Inheritance.inherit(DivUI.Table, DivUI.Component);
 
 
 

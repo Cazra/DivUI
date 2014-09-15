@@ -94,7 +94,7 @@ DivUI.Container.prototype = {
    */
   remove: function(comp) {
     var index;
-    if(comp.isaDivUI.Component) {
+    if(comp.isaComponent) {
       index = this._components.indexOf(comp);
     }
     else {

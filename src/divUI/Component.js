@@ -35,7 +35,8 @@ DivUI.Component = function(div) {
     this._div = document.createElement("div");
   }
   
-  this._oldStyleDisplay = this._div.style.display;
+  this._visibleDisplay = this._div.style.display;
+  this._visible = true;
   this._parent = undefined;
 };
 
@@ -69,23 +70,18 @@ DivUI.Component.prototype = {
    * @param {boolean} visible
    */
   setVisible: function(visible) {
-    if(visible) {
+    if(visible && !this._visible) {
       this._div.style.visibility = "visible";
+      this._div.style.display = this._visibleDisplay;
       
-      if(this._oldStyleDisplay !== "none") {
-        this._div.style.display = this._oldStyleDisplay;
-      }
-      else {
-        this._div.style.display = "inline";
-      }
+      this._visible = true;
     }
-    else {
+    else if(!visible && this._visible) {
       this._div.style.visibility = "hidden";
-      
-      if(this._oldStyleDisplay !== "none") {
-        this._oldStyleDisplay = this._div.style.display;
-      }
+      this._visibleDisplay = this._div.style.display;
       this._div.style.display = "none";
+      
+      this._visible = false;
     }
   },
   

@@ -32,10 +32,8 @@
  * @param {Object} contentsJSON
  */
 DivUI.Table.Row = function(columnIDs, contentsJSON) {
-  DivUI.Component.call(this);
-  var div = this.getDiv();
-  
-  div.style.cssText = "display:table-row;";
+  var row = document.createElement("tr");
+  DivUI.Component.call(this, row);
   
   this._columnIDs = columnIDs;
   this._cells = {};
@@ -43,9 +41,9 @@ DivUI.Table.Row = function(columnIDs, contentsJSON) {
   for(var i in columnIDs) {
     var id = columnIDs[i];
     
-    var cell = document.createElement("div");
+    var cell = document.createElement("td");
     this._cells[id] = cell;
-    div.appendChild(cell);
+    row.appendChild(cell);
   }
   
   this.update(contentsJSON);
@@ -58,15 +56,21 @@ DivUI.Table.Row.prototype = {
   
   isaRow: true,
   
+  
   /** 
-   * Does any clean-up when the row is removed. This may involve 
-   * unsubscribing the row from any event publishers it may be listening to.
-   * Override this.
+   * Returns the TR element for this row. 
+   * @return {tr element}
    */
-  clean:function() {},
+  getTR: function() {
+    return this.getDiv();
+  },
   
   
-  getCellDiv:function(columnID) {
+  /** 
+   * Returns the td element for a cell in this row. 
+   * @return {td element}
+   */
+  getTD:function(columnID) {
     return this._cells[columnID];
   },
   
@@ -75,20 +79,13 @@ DivUI.Table.Row.prototype = {
   //////// Model data access
   
   /** 
-   * Returns the underlying model this row's data is based upon. 
-   * @return {object}
+   * Setter/getter for the object the row's data is based upon.
    */
-  getModel:function() {
+  model: function(model) {
+    if(model !== undefined) {
+      this._model = model;
+    }
     return this._model;
-  },
-  
-  
-  /** 
-   * Sets the underlying model this row's data is based upon. 
-   * @param {object} model
-   */
-  setModel:function(model) {
-    this._model = model;
   },
   
   
@@ -112,7 +109,7 @@ DivUI.Table.Row.prototype = {
    * @param {string | HTML element} content
    */
   updateCell: function(columnID, content) {
-    var cell = this.getCellDiv(columnID);
+    var cell = this.getTD(columnID);
     
     // If the content is some HTML element, clear the cell and append the 
     // content to the cell. Otherwise, just  set the content as the cell's 
@@ -121,7 +118,6 @@ DivUI.Table.Row.prototype = {
       while(cell.firstChild) {
         cell.removeChild(cell.firstChild);
       }
-      
       cell.appendChild(content);
     }
     else {
@@ -135,75 +131,8 @@ DivUI.Table.Row.prototype = {
    * @param {string} columnID
    * @return {string}
    */
-  getContents:function(columnID) {
-    return this.getCellDiv(columnID).innerHTML;
-  },
-  
-  
-  //////// Metrics
-  
-  
-  /** 
-   * Returns the width of a cell in the row. 
-   */
-  getCellWidth:function(columnID) {
-    return this._cells[columnID].offsetWidth;
-  },
-  
-  /** 
-   * Returns the height of a cell in the row. 
-   */
-  getCellHeight:function(columnID) {
-    return this._cells[columnID].offsetHeight;
-  },
-  
-  
-  /** Returns the total width of the row. */
-  getWidth:function() {
-    var width = 0;
-    for(var i in this._columnIDs) {
-      width += this.getCellWidth(i);
-    }
-    return width;
-  },
-  
-  /** 
-   * Returns the total height of the row.
-   */
-  getHeight:function() {
-    var height = 0;
-    for(var i in this._columnIDs) {
-      height += this.getCellHeight(i);
-    }
-    return height;
-  },
-  
-  
-  
-  //////// CSS style
-  
-  /** 
-   * Returns the style used for the cells of this row. 
-   * @return {string}
-   */
-  getStyle:function() {
-    return this._cellsStyle;
-  },
-  
-  
-  /** 
-   * Sets the style for the cells of this row. 
-   * @param {string}
-   */
-  setStyle:function(style) {
-    if(style.search("display:table-cell;") == -1) {
-      style = "display:table-cell; " + style;
-    }
-    this._cellsStyle = style;
-    
-    for(var i in this._cells) {
-      this._cells[i].style.cssText = style;
-    }
+  getValue:function(columnID) {
+    return this.getTD(columnID).innerHTML;
   }
 };
 
